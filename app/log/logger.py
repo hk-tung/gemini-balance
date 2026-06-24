@@ -45,6 +45,7 @@ class AccessLogFormatter(logging.Formatter):
     # API key patterns to match in URLs
     API_KEY_PATTERNS = [
         r"\bAIza[0-9A-Za-z_-]{35}",  # Google API keys (like Gemini)
+        r"(?<![0-9A-Za-z_-])AQ\.[0-9A-Za-z_-]{50}(?![0-9A-Za-z_-])",  # Gemini auth keys
         r"\bsk-[0-9A-Za-z_-]{20,}",  # OpenAI and general sk- prefixed keys
     ]
 
@@ -322,6 +323,7 @@ def setup_access_logging():
 
     Supported API key formats:
     - Google/Gemini API keys: AIza[35 chars]
+    - Google/Gemini authorization keys: AQ.[50 chars]
     - OpenAI API keys: sk-[48 chars]
     - General sk- prefixed keys: sk-[20+ chars]
 

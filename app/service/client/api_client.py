@@ -47,11 +47,15 @@ class GeminiApiClient(ApiClient):
             model = model[:-20]
         return model
 
-    def _prepare_headers(self) -> Dict[str, str]:
+    def _prepare_headers(self, api_key: str) -> Dict[str, str]:
         headers = {}
         if settings.CUSTOM_HEADERS:
             headers.update(settings.CUSTOM_HEADERS)
-            logger.info(f"Using custom headers: {settings.CUSTOM_HEADERS}")
+            logger.info("Using configured custom headers")
+        # Google documents this header for both standard and authorization keys.
+        # Set it last so a stale CUSTOM_HEADERS value cannot override the selected
+        # key from the key manager.
+        headers["x-goog-api-key"] = api_key
         return headers
 
     async def get_models(self, api_key: str) -> Optional[Dict[str, Any]]:
@@ -66,9 +70,9 @@ class GeminiApiClient(ApiClient):
                 proxy_to_use = random.choice(settings.PROXIES)
             logger.info(f"Using proxy for getting models: {proxy_to_use}")
 
-        headers = self._prepare_headers()
+        headers = self._prepare_headers(api_key)
         async with httpx.AsyncClient(timeout=timeout, proxy=proxy_to_use) as client:
-            url = f"{self.base_url}/models?key={api_key}&pageSize=1000"
+            url = f"{self.base_url}/models?pageSize=1000"
             try:
                 response = await client.get(url, headers=headers)
                 response.raise_for_status()
@@ -95,10 +99,10 @@ class GeminiApiClient(ApiClient):
                 proxy_to_use = random.choice(settings.PROXIES)
             logger.info(f"Using proxy for getting models: {proxy_to_use}")
 
-        headers = self._prepare_headers()
+        headers = self._prepare_headers(api_key)
 
         async with httpx.AsyncClient(timeout=timeout, proxy=proxy_to_use) as client:
-            url = f"{self.base_url}/models/{model}:generateContent?key={api_key}"
+            url = f"{self.base_url}/models/{model}:generateContent"
             response = await client.post(url, json=payload, headers=headers)
 
             if response.status_code != 200:
@@ -129,9 +133,9 @@ class GeminiApiClient(ApiClient):
                 proxy_to_use = random.choice(settings.PROXIES)
             logger.info(f"Using proxy for getting models: {proxy_to_use}")
 
-        headers = self._prepare_headers()
+        headers = self._prepare_headers(api_key)
         async with httpx.AsyncClient(timeout=timeout, proxy=proxy_to_use) as client:
-            url = f"{self.base_url}/models/{model}:streamGenerateContent?alt=sse&key={api_key}"
+            url = f"{self.base_url}/models/{model}:streamGenerateContent?alt=sse"
             async with client.stream(
                 method="POST", url=url, json=payload, headers=headers
             ) as response:
@@ -156,9 +160,9 @@ class GeminiApiClient(ApiClient):
                 proxy_to_use = random.choice(settings.PROXIES)
             logger.info(f"Using proxy for counting tokens: {proxy_to_use}")
 
-        headers = self._prepare_headers()
+        headers = self._prepare_headers(api_key)
         async with httpx.AsyncClient(timeout=timeout, proxy=proxy_to_use) as client:
-            url = f"{self.base_url}/models/{model}:countTokens?key={api_key}"
+            url = f"{self.base_url}/models/{model}:countTokens"
             response = await client.post(url, json=payload, headers=headers)
             if response.status_code != 200:
                 error_content = response.text
@@ -180,9 +184,9 @@ class GeminiApiClient(ApiClient):
                 proxy_to_use = random.choice(settings.PROXIES)
             logger.info(f"Using proxy for embedding: {proxy_to_use}")
 
-        headers = self._prepare_headers()
+        headers = self._prepare_headers(api_key)
         async with httpx.AsyncClient(timeout=timeout, proxy=proxy_to_use) as client:
-            url = f"{self.base_url}/models/{model}:embedContent?key={api_key}"
+            url = f"{self.base_url}/models/{model}:embedContent"
             response = await client.post(url, json=payload, headers=headers)
             if response.status_code != 200:
                 error_content = response.text
@@ -207,9 +211,9 @@ class GeminiApiClient(ApiClient):
                 proxy_to_use = random.choice(settings.PROXIES)
             logger.info(f"Using proxy for batch embedding: {proxy_to_use}")
 
-        headers = self._prepare_headers()
+        headers = self._prepare_headers(api_key)
         async with httpx.AsyncClient(timeout=timeout, proxy=proxy_to_use) as client:
-            url = f"{self.base_url}/models/{model}:batchEmbedContents?key={api_key}"
+            url = f"{self.base_url}/models/{model}:batchEmbedContents"
             response = await client.post(url, json=payload, headers=headers)
             if response.status_code != 200:
                 error_content = response.text

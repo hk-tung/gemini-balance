@@ -73,6 +73,7 @@ class FilesService:
                     "X-Goog-Upload-Protocol": headers.get("x-goog-upload-protocol", "resumable"),
                     "X-Goog-Upload-Command": headers.get("x-goog-upload-command", "start"),
                     "Content-Type": headers.get("content-type", "application/json"),
+                    "X-Goog-Api-Key": api_key,
                 }
                 
                 # 添加其他必要的头
@@ -86,7 +87,6 @@ class FilesService:
                     "https://generativelanguage.googleapis.com/upload/v1beta/files",
                     headers=forward_headers,
                     content=body,
-                    params={"key": api_key}
                 )
                 
                 if response.status_code != 200:
@@ -253,7 +253,7 @@ class FilesService:
             async with AsyncClient() as client:
                 response = await client.get(
                     f"{settings.BASE_URL}/{file_name}",
-                    params={"key": api_key}
+                    headers={"X-Goog-Api-Key": api_key},
                 )
                 
                 if response.status_code != 200:
@@ -382,7 +382,7 @@ class FilesService:
             async with AsyncClient() as client:
                 response = await client.delete(
                     f"{settings.BASE_URL}/{file_name}",
-                    params={"key": api_key}
+                    headers={"X-Goog-Api-Key": api_key},
                 )
                 
                 if response.status_code not in [200, 204]:
@@ -421,7 +421,7 @@ class FilesService:
             async with AsyncClient() as client:
                 response = await client.get(
                     f"{settings.BASE_URL}/{file_name}",
-                    params={"key": api_key}
+                    headers={"X-Goog-Api-Key": api_key},
                 )
                 
                 if response.status_code != 200:
@@ -474,7 +474,7 @@ class FilesService:
                     async with AsyncClient() as client:
                         await client.delete(
                             f"{settings.BASE_URL}/{file_name}",
-                            params={"key": api_key}
+                            headers={"X-Goog-Api-Key": api_key},
                         )
                 except Exception as e:
                     # 记录错误但继续处理其他文件

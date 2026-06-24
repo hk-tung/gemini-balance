@@ -149,9 +149,15 @@ def is_valid_api_key(key: str) -> bool:
     Returns:
         bool: 如果密钥格式有效则返回True
     """
-    # 检查Gemini API密钥格式
-    if key.startswith("AIza"):
-        return len(key) >= 30
+    if not isinstance(key, str):
+        return False
+
+    # Gemini standard keys are 39 characters; authorization keys are 53
+    # characters and use the AQ. prefix.
+    if re.fullmatch(r"AIzaSy[A-Za-z0-9_-]{33}", key):
+        return True
+    if re.fullmatch(r"AQ\.[A-Za-z0-9_-]{50}", key):
+        return True
 
     # 检查OpenAI API密钥格式
     if key.startswith("sk-"):
@@ -170,13 +176,12 @@ def redact_key_for_logging(key: str) -> str:
     Returns:
         str: Redacted key in format "first6...last6" or descriptive placeholder for edge cases
     """
-    if not key:
-        return key
+    if not isinstance(key, str) or not key:
+        return "[INVALID_KEY]"
 
     if len(key) <= 12:
-        return f"{key[:3]}...{key[-3:]}"
-    else:
-        return f"{key[:6]}...{key[-6:]}"
+        return "[SHORT_KEY]"
+    return f"{key[:6]}...{key[-6:]}"
 
 
 def get_current_version(default_version: str = "0.0.0") -> str:

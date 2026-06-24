@@ -6,7 +6,9 @@ import unittest
 import logging
 from unittest.mock import patch, MagicMock
 
-from app.utils.helpers import redact_key_for_logging
+from app.config.config import settings
+from app.service.client.api_client import GeminiApiClient
+from app.utils.helpers import is_valid_api_key, redact_key_for_logging
 from app.log.logger import AccessLogFormatter
 
 
@@ -95,6 +97,14 @@ class TestAccessLogFormatter(unittest.TestCase):
         self.assertIn("AIzaSy...xDfGhI", result)
         self.assertNotIn("AIzaSyDhKGfJ8xYzQwErTyUiOpLkMnBvCxDfGhI", result)
 
+    def test_gemini_auth_key_redaction_in_url(self):
+        """Test redaction of service-account-bound Gemini auth keys."""
+        auth_key = "AQ." + "aB_9-" * 10
+        log_message = f'POST /verify-key/{auth_key} HTTP/1.1" 200'
+        result = self.formatter._redact_api_keys_in_message(log_message)
+        self.assertIn("AQ.aB_...-aB_9-", result)
+        self.assertNotIn(auth_key, result)
+
     def test_openai_key_redaction_in_url(self):
         """Test redaction of OpenAI API keys in URLs"""
         log_message = 'GET /api/models?key=sk-1234567890abcdef1234567890abcdef1234567890abcdef HTTP/1.1" 200'
@@ -162,7 +172,7 @@ class TestAccessLogFormatter(unittest.TestCase):
     def test_regex_patterns_compilation(self):
         """Test that regex patterns are properly compiled"""
         formatter = AccessLogFormatter()
-        self.assertEqual(len(formatter.compiled_patterns), 2)
+        self.assertEqual(len(formatter.compiled_patterns), 3)
         self.assertTrue(
             all(hasattr(pattern, "sub") for pattern in formatter.compiled_patterns)
         )
@@ -181,6 +191,31 @@ class TestAccessLogFormatter(unittest.TestCase):
             result = self.formatter._redact_api_keys_in_message(log_message)
             self.assertNotIn(test_key, result)
             self.assertIn("sk-", result)  # Should still contain the prefix
+
+
+class TestGeminiAuthKeys(unittest.TestCase):
+    """Compatibility tests for service-account-bound Gemini API keys."""
+
+    def test_accepts_standard_and_authorization_key_formats(self):
+        self.assertTrue(is_valid_api_key("AIzaSy" + "a" * 33))
+        self.assertTrue(is_valid_api_key("AQ." + "a" * 50))
+
+    def test_rejects_malformed_gemini_keys(self):
+        self.assertFalse(is_valid_api_key("AQ." + "a" * 49))
+        self.assertFalse(is_valid_api_key("AQ." + "a" * 51))
+        self.assertFalse(is_valid_api_key("AIzaSy" + "a" * 32))
+
+    def test_client_uses_selected_key_in_header(self):
+        client = GeminiApiClient(
+            "https://generativelanguage.googleapis.com/v1beta"
+        )
+        auth_key = "AQ." + "a" * 50
+        custom_headers = {"X-Test": "value", "x-goog-api-key": "stale"}
+        with patch.object(settings, "CUSTOM_HEADERS", custom_headers):
+            headers = client._prepare_headers(auth_key)
+
+        self.assertEqual(headers["x-goog-api-key"], auth_key)
+        self.assertEqual(headers["X-Test"], "value")
 
 
 if __name__ == "__main__":
