@@ -69,3 +69,31 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=${{ github.workflow }}
           cache-to: type=gha,scope=${{ github.workflow }}
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: read
+    env:
+      GHCR_USER: ${{ github.actor }}
+      GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy to AWS EC2
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.AWS_HOST }}
+          username: ${{ secrets.AWS_USER }}
+          key: ${{ secrets.AWS_SSH_KEY }}
+          envs: GHCR_USER,GHCR_TOKEN
+          script: |
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+            cd /opt/gemini-balance
+            docker compose pull gemini-balance
+            docker compose up -d --remove-orphans
+            docker image prune -f
