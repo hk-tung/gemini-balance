@@ -113,6 +113,10 @@ jobs:
           envs: GHCR_USER,GHCR_TOKEN,APP_ENV
           script: |
             set -e
+            if [ -z "$APP_ENV" ]; then
+              echo "ERROR: APP_ENV secret is empty or not set" >&2
+              exit 1
+            fi
             printf '%s\n' "$APP_ENV" > /opt/gemini-balance/.env
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
             cd /opt/gemini-balance
