@@ -84,14 +84,26 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Upload compose files to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.AWS_HOST }}
+          username: ${{ secrets.AWS_USER }}
+          key: ${{ secrets.AWS_SSH_KEY }}
+          source: "docker-compose.yml"
+          target: /opt/gemini-balance
+
       - name: Deploy to AWS EC2
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.AWS_HOST }}
           username: ${{ secrets.AWS_USER }}
           key: ${{ secrets.AWS_SSH_KEY }}
-          envs: GHCR_USER,GHCR_TOKEN
+          envs: GHCR_USER,GHCR_TOKEN,APP_ENV
           script: |
+            set -e
+            mkdir -p /opt/gemini-balance
+            printf '%s\n' "$APP_ENV" > /opt/gemini-balance/.env
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
             cd /opt/gemini-balance
             docker compose pull gemini-balance
