@@ -84,6 +84,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Prepare app directory on server
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.AWS_HOST }}
+          username: ${{ secrets.AWS_USER }}
+          key: ${{ secrets.AWS_SSH_KEY }}
+          script: |
+            set -e
+            sudo mkdir -p /opt/gemini-balance
+            sudo chown -R $USER:$USER /opt/gemini-balance
+
       - name: Upload compose files to server
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -102,7 +113,6 @@ jobs:
           envs: GHCR_USER,GHCR_TOKEN,APP_ENV
           script: |
             set -e
-            mkdir -p /opt/gemini-balance
             printf '%s\n' "$APP_ENV" > /opt/gemini-balance/.env
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
             cd /opt/gemini-balance
