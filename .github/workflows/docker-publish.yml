@@ -80,6 +80,7 @@ jobs:
     env:
       GHCR_USER: ${{ github.actor }}
       GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      APP_ENV: ${{ secrets.APP_ENV }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
